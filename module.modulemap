@@ -1,0 +1,5 @@
+module CSwift [system] {
+  header "./Sources/CSwift.h"
+  link "CSwift"
+  export *
+}
