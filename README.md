@@ -17,6 +17,7 @@ Rockford Wei，2017-01-17
 ```
 $ git clone https://github.com/RockfordWei/CSwift.git
 $ cd CSwift
+$ swift build
 $ ./build.lib.sh
 $ swift test
 ```
