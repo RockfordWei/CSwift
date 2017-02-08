@@ -1,5 +1,5 @@
 module CSwift [system] {
-  header "./Sources/CSwift.h"
+  header "CSwift.h"
   link "CSwift"
   export *
 }

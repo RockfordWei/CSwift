@@ -18,7 +18,6 @@ Rockford Wei，2017-01-17
 $ git clone https://github.com/RockfordWei/CSwift.git
 $ cd CSwift
 $ swift build
-$ ./build.lib.sh
 $ swift test
 ```
 源程序采用C语言写成，测试程序则是Swift语言编写。因此如果通过测试，则恭喜您，已经成功实现了Swift语言调用C语言的整个过程。
@@ -39,12 +38,16 @@ $ mkdir CSwift
 $ cd CSwift
 $ swift package init
 $ mv Tests ..
+$ mkdir include
+$ mv ../module.modulemap inlcude/
+$ rm Package.swift
+$ rm -rf Sources
+$ echo > CSwift.c
+$ echo > include/CSwift.h
 $ cd ..
-$ rm -rf CSwift
-$ mkdir Sources
 ```
 
-细心的读者会发现，上面的bash 命令行在CSwift 文件夹下面建立了第二个CSwift文件夹，但是使用了不同的`swift package`了命令。第一个命令是“创建swift空白项目，而且项目类型是系统模块”；而第二个命令是“创建swift 空白项目，项目类型是函数库”。这种做法主要是为了能够在同一个项目中用Swift去测试C语言的模块。
+细心的读者会发现，上面的bash 命令行在CSwift 文件夹下面建立了第二个CSwift文件夹，但是使用了不同的`swift package`了命令。第一个命令是“创建swift空白项目，而且项目类型是系统模块”；而第二个命令是“创建swift 空白项目，项目类型是函数库”。这种做法主要是为了能够在同一个项目中用Swift去测试C语言的模块。其次，在第二个CSwift 子目录下，还建立了一个include 文件夹，并分别建立了两个空白源程序文件 CSwift.c 和 CSwift.h
 
 ### Module Map
 
@@ -52,7 +55,7 @@ $ mkdir Sources
 
 ``` swift
 module CSwift [system] {
-  header "./Sources/CSwift.h"
+  header "CSwift.h"
   link "CSwift"
   export *
 }
@@ -60,48 +63,20 @@ module CSwift [system] {
 
 ### C模块编程
 
-好了，现在请在Source文件夹下面建立两个C语言文件：CSwift.c和CSwift.h，内容如下：
+好了，现在请编辑刚才在第二个CSwift文件夹下面的建立两个C语言文件：CSwift.c和CSwift.h，内容如下：
 
-#### Sources/CSwift.h
+#### CSwift/CSwift/include/CSwift.h
 
 ``` c
 extern int c_add(int, int);
 #define C_TEN 10
 ```
 
-#### Sources/CSwift.c
+#### CSwift/CSwift/CSwift.c
 
 ``` c
+#include "include/CSwift.h"
 int c_add(int a, int b) { return a + b ; }
-```
-
-### C模块的编译和库函数链接
-
-上述步骤完成后，可以开始进行C函数库的编译了。首先准备一个编译脚本build.lib.sh，内容如下：
-
-#### build.lib.sh
-
-```
-export LIB_BUILD=.build/debug
-cd Sources
-clang -c CSwift.c
-cd ..
-mv Sources/CSwift.o $LIB_BUILD
-ar -r $LIB_BUILD/libCSwift.a $LIB_BUILD/CSwift.o
-export LIB_BUILD=
-```
-
-上面的程序首先把CSwift.c用clang 编译器（也就是swift的母编译器）链接为一个.o目标文件，然后通过`ar -r` 命令链接为静态函数库，关键是函数库的位置一定要与swift 的目标库目录路径一致。
-
-如果您准备发行，则用.build/release代替上面程序中的`$LIB_BUILD`变量。
-
-保存后执行下列命令：
-
-```
-$ cd CSwift
-$ chmod +x build.lib.sh
-$ swift build
-$ ./build.lib.sh
 ```
 
 到此为止，C语言函数库就应该准备好了。
@@ -139,6 +114,7 @@ class CSwiftTests: XCTestCase {
 最后一步最简单，直接执行：
 
 ```
+$ swift build
 $ swift test
 ```
 
