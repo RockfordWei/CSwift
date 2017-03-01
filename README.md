@@ -122,4 +122,4 @@ $ swift test
 
 ## 其他
 
-如果您在使用Xcode，则需要使用`swift package generate-xcodeproj`，但是需要调整上述build.lib.sh内容的编译目标目录，并配合Xcode偏好设置选择匹配的目录，否则无法测试。
+如果您在使用Xcode，则需要使用`swift package generate-xcodeproj`。
