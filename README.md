@@ -10,7 +10,7 @@ Rockford Wei，2017-01-17
 
 ## 快速上手
 
-本程序需要Swift 3.0以上版本。:clipboard:
+本程序需要Swift 3.0以上版本。[:clipboard:](https://github.com/RockfordWei/)
 
 ### 下载、编译和测试
 
