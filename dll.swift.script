@@ -1,0 +1,28 @@
+#if os(Linux)
+#else
+import Darwin
+#endif
+guard CommandLine.argc > 1 else {
+  print("usage: dll [path]")
+  exit(-1)
+}
+let dllpath = CommandLine.arguments[1]
+print("try open \(dllpath)")
+
+guard let lib = dlopen(dllpath,  RTLD_LAZY) else {
+  exit(0)
+}
+
+print("ok.\nnow try to do 1 + 2")
+typealias AddFunc = @convention(c) (CInt, CInt) -> CInt
+
+guard let c_add = dlsym(lib, "c_add") else {
+  dlclose(lib)
+  exit(0)
+}
+
+let add = unsafeBitCast(c_add, to: AddFunc.self)
+let x = add(1, 2)
+print(x)
+dlclose(lib)
+print("dll closed")
