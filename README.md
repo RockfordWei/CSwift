@@ -1,18 +1,22 @@
-# Swift调用C语言自建函数库的方法
+# C Module for Swift, Swift Script and Dynamic Library Call [简体中文](README.zh_CN.md)
 
 Rockford Wei，2017-01-17
 
-本程序示范了如何用Swift调用自定义C语言模块的方法。您可以直接下载本程序，或者按照以下教程逐步完成。
+This project demonstrates how to call a customized C library in your swift project.
+You can clone it from github, or follow the instruction below to generate it step by step.
 
-## 简介
+Furthermore, this demo also shows how to use swift as a script, with examples of calling C api as dynamic libraries.
+This practice makes it possible to patch hot fixes for server side swift without stopping the server, theoretically.
 
-示范程序中有一个C语言的源程序CSwift.C和一个头文件CSwift.h，我们的目标是构造一个CSwift的函数库，能够让swift源程序执行CSwift程序中的函数。
+## Introduction
 
-## 快速上手
+There are two C files: CSwift.c and CSwift.h. The objective is to build a CSwift library and export it to Swift.
 
-本程序需要Swift 3.0以上版本。[:clipboard:](https://github.com/RockfordWei/)
+## Quick Start
 
-### 下载、编译和测试
+Please compile this project with Swift 3.0 toolchain.
+
+### Build & Test
 
 ```
 $ git clone https://github.com/RockfordWei/CSwift.git
@@ -20,15 +24,16 @@ $ cd CSwift
 $ swift build
 $ swift test
 ```
-源程序采用C语言写成，测试程序则是Swift语言编写。因此如果通过测试，则恭喜您，已经成功实现了Swift语言调用C语言的整个过程。
 
-## 详细步骤
+The sources are written in C while the test program is written in Swift. So if all tests passed, then congratulations! You've already mastered the process to call C api in a Swift source.
 
-您可以完全不依赖所有上述内容，而一步一步从零开始制作C函数库和调用C库的Swift代码：
+## Walk Through
 
-### 构造空白的函数库
+However, even without the sources above, you can still start everything from blank:
 
-仍然假定函数库名称为CSwift。首先找一个空白目录，然后执行：
+### Start From An Empty Folder:
+
+Assume the objective library is still CSwift, then find an empty folder and try these commands in a terminal:
 
 ```
 $ mkdir CSwift
@@ -47,11 +52,15 @@ $ echo > include/CSwift.h
 $ cd ..
 ```
 
-细心的读者会发现，上面的bash 命令行在CSwift 文件夹下面建立了第二个CSwift文件夹，但是使用了不同的`swift package`了命令。第一个命令是“创建swift空白项目，而且项目类型是系统模块”；而第二个命令是“创建swift 空白项目，项目类型是函数库”。这种做法主要是为了能够在同一个项目中用Swift去测试C语言的模块。其次，在第二个CSwift 子目录下，还建立了一个include 文件夹，并分别建立了两个空白源程序文件 CSwift.c 和 CSwift.h
+You may notice that the above commands make a second CSwift folder inside the first one, but with different `swift package` commmand line.
+The first `swift package` is to create a blank swift project and will build as an system module; The second one, however, is just to create a common swift library.
+The purpose of such a trick is to create testing scripts for system module.
+
+Besides, it also creates an `include` folder under the second CSwift directory, with two blank source file place holder `CSwift.c` and `CSwift.h`.
 
 ### Module Map
 
-下一步是修理一下目标的模块映射表。请把module.modulemap修改为如下程序：
+Now it is time to modify the module map file, check this out:
 
 ``` swift
 module CSwift [system] {
@@ -61,9 +70,9 @@ module CSwift [system] {
 }
 ```
 
-### C模块编程
+### C Code
 
-好了，现在请编辑刚才在第二个CSwift文件夹下面的建立两个C语言文件：CSwift.c和CSwift.h，内容如下：
+Then you can customize the C code as demo below:
 
 #### CSwift/CSwift/include/CSwift.h
 
@@ -79,11 +88,11 @@ extern int c_add(int, int);
 int c_add(int a, int b) { return a + b ; }
 ```
 
-到此为止，C语言函数库就应该准备好了。
+Up to now, C api is ready to call. So far so good.
 
-### Swift 程序调用
+### Call C API in Swift
 
-请修改Tests/CSwiftTests/CSwiftTests.swift文件，内容如下：
+The following code is a good example to show how to call your C api statically, as `Tests/CSwiftTests/CSwiftTests.swift`:
 
 ``` swift
 
@@ -92,10 +101,11 @@ import XCTest
 
 class CSwiftTests: XCTestCase {
     func testExample() {
-        // 测试调用 C 函数
+        // Test call "x + y" from your C library
         let three = c_add(1, 2)
         XCTAssertEqual(three, 3)
-        // 测试调用 C 语言的符号
+
+        // Test macro exports
         XCTAssertEqual(C_TEN, 10)
     }
 
@@ -109,17 +119,75 @@ class CSwiftTests: XCTestCase {
 
 ```
 
-### 测试
+### Test
 
-最后一步最简单，直接执行：
+The final step is the easiest one - build & test:
 
 ```
 $ swift build
 $ swift test
 ```
 
-如果没有问题，那就一切OK了！
+If success, then perfect!
 
-## 其他
+## Swift as Script and Call C lib dynamically
 
-如果您在使用Xcode，则需要使用`swift package generate-xcodeproj`。
+Beside the above classic static build & run, Swift also provide an interpreter to execute swift source as scripts, just like a playground in a terminal.
+This project also makes an example for swift script, and even more, introduces how to call the same C api dynamically in such a script.
+
+### Dynamic Link Library
+
+Please check a swift script `dll.swift.script`, actually it is a common swift with no difference to any other swift sources:
+
+``` swift
+// First thing first, make sure your dll path is an dynamic library in an ABSOLUTE path.
+// on Mac, the suffix is ".dylib"; on Linux, it is ".so"
+guard let lib = dlopen(dllpath,  RTLD_LAZY) else {
+  exit(0)
+}
+
+// declare the api prototype to call
+typealias AddFunc = @convention(c) (CInt, CInt) -> CInt
+
+// look up the function in the library
+guard let c_add = dlsym(lib, "c_add") else {
+  dlclose(lib)
+  exit(0)
+}
+
+// attache the function to the real API address
+let add = unsafeBitCast(c_add, to: AddFunc.self)
+
+// call the C method, dynamically
+let x = add(1, 2)
+print(x)
+
+// release resources
+dlclose(lib)
+```
+
+### Run the Swift Script
+
+This project also provides a bash script `dll.sh` to run the swift script above.
+```
+# step one, build the C library
+swift build
+
+# then test what OS it is: .dylib for apple and .so for linux
+if swift --version|grep apple
+then
+  SUFFIX=dylib
+else
+  SUFFIX=so
+fi
+
+# generate the full path of new library.
+DLL=$PWD/.build/debug/libCSwift.$SUFFIX
+
+# run the swift script and call the libray.
+swift dll.swift.script $DLL
+```
+
+## More Info
+
+If Xcode is preferred, then try command `swift package generate-xcodeproj` before building.
