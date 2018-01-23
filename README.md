@@ -2,6 +2,8 @@
 
 Rockford Wei，2017-01-17
 
+Last update: 2018-01-23
+
 This project demonstrates how to call a customized C library in your swift project.
 You can clone it from github, or follow the instruction below to generate it step by step.
 
@@ -14,7 +16,7 @@ There are two C files: CSwift.c and CSwift.h. The objective is to build a CSwift
 
 ## Quick Start
 
-Please compile this project with Swift 3.0 toolchain.
+Please compile this project with Swift 4.0.3 toolchain.
 
 ### Build & Test
 
@@ -36,87 +38,60 @@ However, even without the sources above, you can still start everything from bla
 Assume the objective library is still CSwift, then find an empty folder and try these commands in a terminal:
 
 ```
-$ mkdir CSwift
-$ cd CSwift
-$ swift package init --type=system-module
-$ mkdir CSwift
-$ cd CSwift
-$ swift package init
-$ mv Tests ..
-$ mkdir include
-$ mv ../module.modulemap inlcude/
-$ rm Package.swift
-$ rm -rf Sources
-$ echo > CSwift.c
-$ echo > include/CSwift.h
-$ cd ..
+mkdir CSwift && cd CSwift && swift package init
+mkdir Sources/CSwift/include && rm Sources/CSwift/CSwift.swift
 ```
 
-You may notice that the above commands make a second CSwift folder inside the first one, but with different `swift package` commmand line.
-The first `swift package` is to create a blank swift project and will build as an system module; The second one, however, is just to create a common swift library.
-The purpose of such a trick is to create testing scripts for system module.
+The above commands will set up the empty project template
 
-Besides, it also creates an `include` folder under the second CSwift directory, with two blank source file place holder `CSwift.c` and `CSwift.h`.
+### C Header File
 
-### Module Map
-
-Now it is time to modify the module map file, check this out:
-
-``` swift
-module CSwift [system] {
-  header "CSwift.h"
-  link "CSwift"
-  export *
-}
-```
-
-### C Code
-
-Then you can customize the C code as demo below:
-
-#### CSwift/CSwift/include/CSwift.h
+Now edit the header file `Sources/CSwift/include/Swift.h`:
 
 ``` c
 extern int c_add(int, int);
 #define C_TEN 10
 ```
 
-#### CSwift/CSwift/CSwift.c
+### C Source
+
+Finishing the implementation of the C body `Sources/CSwift/CSwift.c`:
 
 ``` c
 #include "include/CSwift.h"
 int c_add(int a, int b) { return a + b ; }
 ```
 
-Up to now, C api is ready to call. So far so good.
+### Module Map
+
+Next, we will setup an umbrella file for swift: 
+`Sources/CSwift/include/module.modulemap`
+
+``` swift
+module CSwift [system] {
+  header "CSwift.h"
+  export *
+}
+```
 
 ### Call C API in Swift
 
-The following code is a good example to show how to call your C api statically, as `Tests/CSwiftTests/CSwiftTests.swift`:
+Now let's check if the library works by editing a test script:
+`Tests/CSwiftTests/CSwiftTests.swift`
 
 ``` swift
-
 import XCTest
 @testable import CSwift
-
 class CSwiftTests: XCTestCase {
-    func testExample() {
-        // Test call "x + y" from your C library
-        let three = c_add(1, 2)
-        XCTAssertEqual(three, 3)
-
-        // Test macro exports
-        XCTAssertEqual(C_TEN, 10)
-    }
-
-
-    static var allTests : [(String, (CSwiftTests) -> () throws -> Void)] {
-        return [
-            ("testExample", testExample),
-        ]
-    }
+  func testExample() {
+    let three = c_add(1, 2)
+    XCTAssertEqual(three, 3)
+    XCTAssertEqual(C_TEN, 10)
+  }
+  static var allTests : [(String, (CSwiftTests) -> () throws -> Void)] {
+      return [  ("testExample", testExample)  ]
+  }
 }
-
 ```
 
 ### Test
@@ -136,6 +111,17 @@ Beside the above classic static build & run, Swift also provide an interpreter t
 This project also makes an example for swift script, and even more, introduces how to call the same C api dynamically in such a script.
 
 ### Dynamic Link Library
+
+The default linking object of Swift 4 is static, so it needs a bit modification to turn it into a dynamic one. 
+
+To do this, edit the Package.swift file, and add a line:
+
+``` swift
+.library(
+    name: "CSwift",
+    type: .`dynamic`,  // <------------ Insert the dynamic type right here!
+    targets: ["CSwift"]),
+```
 
 Please check a swift script `dll.swift.script`, actually it is a common swift with no difference to any other swift sources:
 

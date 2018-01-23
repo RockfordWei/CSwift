@@ -1,6 +1,8 @@
-# Swift 调用 C 语言自建函数库 及 Swift 脚本和动态链接库的使用方法 [English](README.md)
+# Swift 调用 C 语言自建函数库 及 Swift 脚本和动态链接库的使用方法 
 
 Rockford Wei，2017-01-17
+
+最近更新：2018-01-23
 
 本程序示范了如何用Swift调用自定义C语言模块的方法。您可以直接下载本程序，或者按照以下教程逐步完成。
 此外，示范程序还展示了如何使用 Swift 作为脚本运行，并且在脚本中调用C语言的动态链接库，使得服务器端Swift 开发实现热补丁。
@@ -11,7 +13,7 @@ Rockford Wei，2017-01-17
 
 ## 快速上手
 
-本程序需要Swift 3.0以上版本。
+本程序需要Swift 4.0.3 以上版本。
 
 ### 下载、编译和测试
 
@@ -32,55 +34,41 @@ $ swift test
 仍然假定函数库名称为CSwift。首先找一个空白目录，然后执行：
 
 ```
-$ mkdir CSwift
-$ cd CSwift
-$ swift package init --type=system-module
-$ mkdir CSwift
-$ cd CSwift
-$ swift package init
-$ mv Tests ..
-$ mkdir include
-$ mv ../module.modulemap include/
-$ rm Package.swift
-$ rm -rf Sources
-$ echo > CSwift.c
-$ echo > include/CSwift.h
-$ cd ..
+mkdir CSwift && cd CSwift && swift package init
+mkdir Sources/CSwift/include && rm Sources/CSwift/CSwift.swift
 ```
 
-细心的读者会发现，上面的bash 命令行在CSwift 文件夹下面建立了第二个CSwift文件夹，但是使用了不同的`swift package`了命令。第一个命令是“创建swift空白项目，而且项目类型是系统模块”；而第二个命令是“创建swift 空白项目，项目类型是函数库”。这种做法主要是为了能够在同一个项目中用Swift去测试C语言的模块。其次，在第二个CSwift 子目录下，还建立了一个include 文件夹，并分别建立了两个空白源程序文件 CSwift.c 和 CSwift.h
+上述命令能够新建一个空白的函数库模板
 
-### Module Map
+### C 函数头文件
 
-下一步是修理一下目标的模块映射表。请把module.modulemap修改为如下程序：
-
-``` swift
-module CSwift [system] {
-  header "CSwift.h"
-  link "CSwift"
-  export *
-}
-```
-
-### C模块编程
-
-好了，现在请编辑刚才在第二个CSwift文件夹下面的建立两个C语言文件：CSwift.c和CSwift.h，内容如下：
-
-#### CSwift/CSwift/include/CSwift.h
+现在编辑头文件 `Sources/CSwift/include/Swift.h`:
 
 ``` c
 extern int c_add(int, int);
 #define C_TEN 10
 ```
 
-#### CSwift/CSwift/CSwift.c
+### C 函数体文件
+
+然后通过修改文件 `Sources/CSwift/CSwift.c`完成函数实现:
 
 ``` c
 #include "include/CSwift.h"
 int c_add(int a, int b) { return a + b ; }
 ```
 
-到此为止，C语言函数库就应该准备好了。
+### 模块映射
+
+下一步为Swift 语言构造一个映射模块文件：
+`Sources/CSwift/include/module.modulemap`
+
+``` swift
+module CSwift [system] {
+  header "CSwift.h"
+  export *
+}
+```
 
 ### Swift 程序调用
 
@@ -92,20 +80,17 @@ import XCTest
 @testable import CSwift
 
 class CSwiftTests: XCTestCase {
-    func testExample() {
-        // 测试调用 C 函数
-        let three = c_add(1, 2)
-        XCTAssertEqual(three, 3)
-        // 测试调用 C 语言的符号
-        XCTAssertEqual(C_TEN, 10)
-    }
+  func testExample() {
+    // 测试调用 C 函数
+    let three = c_add(1, 2)
+    XCTAssertEqual(three, 3)
+    // 测试调用 C 语言的符号
+    XCTAssertEqual(C_TEN, 10)
+  }
 
-
-    static var allTests : [(String, (CSwiftTests) -> () throws -> Void)] {
-        return [
-            ("testExample", testExample),
-        ]
-    }
+  static var allTests : [(String, (CSwiftTests) -> () throws -> Void)] {
+    return [ ("testExample", testExample)]
+  }
 }
 
 ```
@@ -127,6 +112,16 @@ $ swift test
 本文顺便利用这个脚本，同时说明一下动态链接库的使用方法。
 
 ### 动态链接库
+
+默认的Swift 4为静态编译，因此如果希望使用动态链接，则需要做一个调整。
+请打开Package.swift文件增加下一行：
+
+``` swift
+.library(
+    name: "CSwift",
+    type: .`dynamic`,  // <------------ 在这里增加新的一行
+    targets: ["CSwift"]),
+```
 
 本项目附带了一个特殊脚本dll.swift.script，内容为一个普通Swift 源程序：
 
