@@ -40,7 +40,7 @@ $ cd CSwift
 $ swift package init
 $ mv Tests ..
 $ mkdir include
-$ mv ../module.modulemap inlcude/
+$ mv ../module.modulemap include/
 $ rm Package.swift
 $ rm -rf Sources
 $ echo > CSwift.c
